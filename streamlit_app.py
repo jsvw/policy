@@ -16,7 +16,8 @@ avatars = {
     "Mia the Moderator": "🎤"
 }
 
-openai.api_key = "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"
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+
 
 roles = {
     "John the Strategist": "You are John the Strategist. ONLY speak from your own perspective. Never refer to yourself as another agent. Respond to the discussion so far. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
