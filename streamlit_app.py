@@ -1,57 +1,59 @@
-
 import streamlit as st
 import openai
-import os
 import random
 
 st.set_page_config(page_title="Policy AI Roundtable", layout="wide")
 
+# New real names for bots
 avatars = {
-    "StrategyBot": "🧠",
-    "FinanceBot": "💰",
-    "PeopleBot": "❤️",
-    "LegalBot": "⚖️",
-    "ClientBot": "🤝",
-    "InnovatorBot": "🚀",
-    "EthicsBot": "🧭",
-    "ModeratorBot": "🎤"
+    "John the Strategist": "🧠",
+    "Jane the Financial Analyst": "💰",
+    "Emma the People Manager": "❤️",
+    "Leo the Legal Advisor": "⚖️",
+    "Sam the Client Relationship Manager": "🤝",
+    "Isla the Innovator": "🚀",
+    "Ethan the Ethics Specialist": "🧭",
+    "Mia the Moderator": "🎤"
 }
 
 openai.api_key = "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"
 
-
 roles = {
-    "StrategyBot": "You are StrategyBot. ONLY speak from your own perspective. Never refer to yourself as another agent. Respond to the discussion so far. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "FinanceBot": "You are FinanceBot. ONLY speak from your own perspective. Evaluate financial impact and cost-benefit of policy proposals. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "PeopleBot": "You are PeopleBot. ONLY speak from your own perspective. Focus on employee well-being, morale, and team dynamics. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "LegalBot": "You are LegalBot. ONLY speak from your own perspective. Cover legal, contractual, and compliance aspects. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "ClientBot": "You are ClientBot. ONLY speak from your own perspective. Assess client perception and concerns. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "InnovatorBot": "You are InnovatorBot. ONLY speak from your own perspective. Offer bold, future-forward solutions. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "EthicsBot": "You are EthicsBot. ONLY speak from your own perspective. Ensure fairness, inclusion, and transparency. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "ModeratorBot": "You are ModeratorBot. ONLY speak from your own perspective. Guide discussion, highlight conflicts, summarize who said what, and call on specific agents to respond."
+    "John the Strategist": "You are John the Strategist. ONLY speak from your own perspective. Never refer to yourself as another agent. Respond to the discussion so far. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
+    "Jane the Financial Analyst": "You are Jane the Financial Analyst. ONLY speak from your own perspective. Evaluate financial impact and cost-benefit of policy proposals. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
+    "Emma the People Manager": "You are Emma the People Manager. ONLY speak from your own perspective. Focus on employee well-being, morale, and team dynamics. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
+    "Leo the Legal Advisor": "You are Leo the Legal Advisor. ONLY speak from your own perspective. Cover legal, contractual, and compliance aspects. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
+    "Sam the Client Relationship Manager": "You are Sam the Client Relationship Manager. ONLY speak from your own perspective. Assess client perception and concerns. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
+    "Isla the Innovator": "You are Isla the Innovator. ONLY speak from your own perspective. Offer bold, future-forward solutions. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
+    "Ethan the Ethics Specialist": "You are Ethan the Ethics Specialist. ONLY speak from your own perspective. Ensure fairness, inclusion, and transparency. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
+    "Mia the Moderator": "You are Mia the Moderator. ONLY speak from your own perspective. Guide discussion, highlight conflicts, summarize who said what, and call on specific agents to respond."
 }
 
 urgency_keywords = {
-    "FinanceBot": ["cost", "budget", "money", "salary", "efficiency", "profit", "billable"],
-    "PeopleBot": ["morale", "burnout", "well-being", "work-life", "happiness", "team"],
-    "LegalBot": ["legal", "contract", "compliance", "law", "regulation", "risk"],
-    "ClientBot": ["client", "customer", "trust", "delivery", "accessibility"],
-    "InnovatorBot": ["change", "innovation", "future", "technology", "new", "experiment"],
-    "EthicsBot": ["fairness", "equality", "inclusion", "bias", "equity", "justice"],
-    "StrategyBot": ["goal", "strategy", "direction", "long-term", "mission"]
+    "Jane the Financial Analyst": ["cost", "budget", "money", "salary", "efficiency", "profit", "billable"],
+    "Emma the People Manager": ["morale", "burnout", "well-being", "work-life", "happiness", "team"],
+    "Leo the Legal Advisor": ["legal", "contract", "compliance", "law", "regulation", "risk"],
+    "Sam the Client Relationship Manager": ["client", "customer", "trust", "delivery", "accessibility"],
+    "Isla the Innovator": ["change", "innovation", "future", "technology", "new", "experiment"],
+    "Ethan the Ethics Specialist": ["fairness", "equality", "inclusion", "bias", "equity", "justice"],
+    "John the Strategist": ["goal", "strategy", "direction", "long-term", "mission"]
 }
 
 st.title("🤖 AI Policy Roundtable")
 st.subheader("Simulate a conversation between AI agents to evaluate a company policy")
 
-policy = st.text_input("💬 What policy should be discussed?", "Introduce a 4-day workweek for all consulting teams, with no salary reduction.")
+# Input field to capture the policy to discuss
+policy = st.text_input("💬 What policy should be discussed?", "firing those who do not achieve the KPIs")
 
-if "conversation" not in st.session_state:
+# Initialize session state if it doesn't exist
+if "conversation" not in st.session_state or st.session_state.policy != policy:
+    # Reset the conversation state if policy changes
     st.session_state.conversation = [
         {"role": "user", "content": f"The team is discussing the policy: '{policy}'\nBegin by sharing your perspective. Speak only if your expertise is relevant or you have something to challenge or clarify. Engage with each other and seek consensus."}
     ]
     st.session_state.agent_opinions = {name: "" for name in roles.keys()}
     st.session_state.history = []
+    st.session_state.policy = policy  # Store the current policy
 
 st.markdown("### 🧑‍💼 Agents")
 cols = st.columns(4)
@@ -66,22 +68,22 @@ if st.button("▶️ Run Next Round"):
     conversation = st.session_state.conversation
     agent_opinions = st.session_state.agent_opinions
 
-    if not any([msg["role"] == "assistant" and "ModeratorBot" in msg["content"] for msg in conversation]):
+    if not any([msg["role"] == "assistant" and "Mia the Moderator" in msg["content"] for msg in conversation]):
         try:
             mod_response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=[{"role": "system", "content": roles["ModeratorBot"]}, *conversation]
+                messages=[{"role": "system", "content": roles["Mia the Moderator"]}, *conversation]
             )
             mod_content = mod_response["choices"][0]["message"]["content"]
-            conversation.append({"role": "assistant", "content": f"ModeratorBot says:\n{mod_content}"})
-            agent_opinions["ModeratorBot"] = mod_content.strip()
+            conversation.append({"role": "assistant", "content": f"Mia the Moderator says:\n{mod_content}"})
+            agent_opinions["Mia the Moderator"] = mod_content.strip()
         except Exception as e:
-            st.error(f"ModeratorBot error: {e}")
+            st.error(f"Mia the Moderator error: {e}")
 
     recent_text = " ".join([msg["content"].lower() for msg in conversation[-10:]])
     round_agents = []
     for name in agent_names:
-        if name != "ModeratorBot":
+        if name != "Mia the Moderator":
             keywords = urgency_keywords.get(name, [])
             if any(word in recent_text for word in keywords) or random.random() < 0.5:
                 round_agents.append(name)
@@ -124,7 +126,7 @@ if st.button("🧾 Get Final Recommendation"):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": roles["ModeratorBot"] + " Summarize the discussion above. Give a final recommendation: should the policy be implemented? What would be the consequences, risks, and benefits?"},
+                {"role": "system", "content": roles["Mia the Moderator"] + " Summarize the discussion above. Give a final recommendation: should the policy be implemented? What would be the consequences, risks, and benefits?"},
                 *st.session_state.conversation
             ]
         )
