@@ -16,7 +16,7 @@ avatars = {
     "Mia the Moderator": "🎤"
 }
 
-openai.api_key = "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"  # Ensure you use your actual API key
+openai.api_key = "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"
 
 roles = {
     "John the Strategist": "You are John the Strategist. ONLY speak from your own perspective. Never refer to yourself as another agent. Respond to the discussion so far. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
@@ -70,7 +70,7 @@ if st.button("▶️ Run Next Round"):
 
     if not any([msg["role"] == "assistant" and "Mia the Moderator" in msg["content"] for msg in conversation]):
         try:
-            mod_response = openai.completions.create(
+            mod_response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "system", "content": roles["Mia the Moderator"]}, *conversation]
             )
@@ -85,7 +85,7 @@ if st.button("▶️ Run Next Round"):
     for name in agent_names:
         if name != "Mia the Moderator":
             keywords = urgency_keywords.get(name, [])
-            if any(word in recent_text for word in keywords) or random.random() < 0.5:
+            if any(word in recent_text for word in keywords) or random.random() < 0.8:
                 round_agents.append(name)
 
     random.shuffle(round_agents)
@@ -99,7 +99,7 @@ if st.button("▶️ Run Next Round"):
 
             user_prompt = f"{summary}\nPlease respond with your unique perspective, referencing others where helpful. Do not repeat yourself."
 
-            response = openai.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": roles[name]},
@@ -123,7 +123,7 @@ for msg in st.session_state.conversation:
 
 if st.button("🧾 Get Final Recommendation"):
     try:
-        response = openai.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": roles["Mia the Moderator"] + " Summarize the discussion above. Give a final recommendation: should the policy be implemented? What would be the consequences, risks, and benefits?"},
