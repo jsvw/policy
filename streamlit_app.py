@@ -85,7 +85,7 @@ if st.button("▶️ Run Next Round"):
     for name in agent_names:
         if name != "Mia the Moderator":
             keywords = urgency_keywords.get(name, [])
-            if any(word in recent_text for word in keywords) or random.random() < 0.8:
+            if any(word in recent_text for word in keywords) or random.random() < 0.9:
                 round_agents.append(name)
 
     random.shuffle(round_agents)
