@@ -16,7 +16,7 @@ avatars = {
     "Mia the Moderator": "🎤"
 }
 
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+openai.api_key = "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"
 
 
 roles = {
