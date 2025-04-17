@@ -16,7 +16,7 @@ avatars = {
     "Mia the Moderator": "🎤"
 }
 
-openai.api_key = "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"
+openai.api_key = "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"  # Ensure you use your actual API key
 
 roles = {
     "John the Strategist": "You are John the Strategist. ONLY speak from your own perspective. Never refer to yourself as another agent. Respond to the discussion so far. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
@@ -70,7 +70,7 @@ if st.button("▶️ Run Next Round"):
 
     if not any([msg["role"] == "assistant" and "Mia the Moderator" in msg["content"] for msg in conversation]):
         try:
-            mod_response = openai.ChatCompletion.create(
+            mod_response = openai.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "system", "content": roles["Mia the Moderator"]}, *conversation]
             )
@@ -99,7 +99,7 @@ if st.button("▶️ Run Next Round"):
 
             user_prompt = f"{summary}\nPlease respond with your unique perspective, referencing others where helpful. Do not repeat yourself."
 
-            response = openai.ChatCompletion.create(
+            response = openai.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": roles[name]},
@@ -123,7 +123,7 @@ for msg in st.session_state.conversation:
 
 if st.button("🧾 Get Final Recommendation"):
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": roles["Mia the Moderator"] + " Summarize the discussion above. Give a final recommendation: should the policy be implemented? What would be the consequences, risks, and benefits?"},
