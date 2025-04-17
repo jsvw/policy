@@ -13,7 +13,8 @@ avatars = {
     "Sam the Client Relationship Manager": "🤝",
     "Isla the Innovator": "🚀",
     "Ethan the Ethics Specialist": "🧭",
-    "Mia the Moderator": "🎤"
+    "Mia the Moderator": "🎤",
+    "Esmee the Infographic Designer": "🎨"
 }
 
 # Initialize OpenAI client (new 1.x interface)
@@ -27,7 +28,8 @@ roles = {
     "Sam the Client Relationship Manager": "You are Sam the Client Relationship Manager. ONLY speak from your own perspective. Assess client perception and concerns. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
     "Isla the Innovator": "You are Isla the Innovator. ONLY speak from your own perspective. Offer bold, future-forward solutions. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
     "Ethan the Ethics Specialist": "You are Ethan the Ethics Specialist. ONLY speak from your own perspective. Ensure fairness, inclusion, and transparency. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
-    "Mia the Moderator": "You are Mia the Moderator. ONLY speak from your own perspective. Guide discussion, highlight conflicts, summarize who said what, and call on specific agents to respond."
+    "Mia the Moderator": "You are Mia the Moderator. ONLY speak from your own perspective. Guide discussion, highlight conflicts, summarize who said what, and call on specific agents to respond.",
+    "Esmee the Infographic Designer": "You are Esmee the Infographic Designer. Create a clear, visually appealing infographic that summarizes the policy and each agent's main arguments. Generate an image based on the discussion transcript."
 }
 
 urgency_keywords = {
@@ -69,6 +71,7 @@ for i, name in enumerate(roles):
                 preview += "..."
             st.caption(preview)
 
+# Round button triggers discussion
 if st.button("▶️ Run Next Round"):
     agent_names = list(roles.keys())
     conversation = st.session_state.conversation
@@ -92,22 +95,18 @@ if st.button("▶️ Run Next Round"):
         recent_text = " ".join(msg["content"].lower() for msg in conversation[-10:])
         round_agents = []
         for name in agent_names:
-            if name == "Mia the Moderator":
-                continue
+            if name == "Mia the Moderator": continue
             keywords = urgency_keywords.get(name, [])
-            # include if topic urgent or random chance
             if any(kw in recent_text for kw in keywords) or random.random() < 0.9:
                 round_agents.append(name)
         random.shuffle(round_agents)
-
         for name in round_agents:
             try:
                 summary = "Here's what others have said:\n\n"
                 for other, opinion in agent_opinions.items():
                     if opinion and other != name:
-                        snippet = opinion[:200] + ("..." if len(opinion) > 200 else "")
+                        snippet = opinion[:200] + ("..." if len(opinion)>200 else "")
                         summary += f"- {other} said: {snippet}\n"
-
                 user_prompt = f"{summary}\nPlease respond with your unique perspective, referencing others where helpful. Do not repeat yourself."
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
@@ -123,7 +122,6 @@ if st.button("▶️ Run Next Round"):
             except Exception as e:
                 st.warning(f"{name} error: {e}")
 
-    # Save back state
     st.session_state.conversation = conversation
     st.session_state.agent_opinions = agent_opinions
 
@@ -132,6 +130,7 @@ st.markdown("### 🗣️ Conversation")
 for msg in st.session_state.conversation:
     st.markdown(f"{msg['content']}")
 
+# Final recommendation by Moderator
 if st.button("🧾 Get Final Recommendation"):
     try:
         result = client.chat.completions.create(
@@ -147,6 +146,24 @@ if st.button("🧾 Get Final Recommendation"):
     except Exception as e:
         st.error(f"Final summary error: {e}")
 
+# Esmee: generate infographic
+if st.button("🎨 Generate Infographic"):
+    try:
+        # build summary prompt
+        summary_text = f"Policy: {policy}\n\n"
+        for name, opinion in st.session_state.agent_opinions.items():
+            summary_text += f"{name}: {opinion}\n\n"
+        # request infographic image
+        img_resp = client.images.generate(
+            prompt=f"Create a clear, engaging infographic summarizing this policy discussion and each agent's key points:\n{summary_text}",
+            size="1024x768"
+        )
+        image_url = img_resp.data[0].url
+        st.image(image_url, caption="Infographic by Esmee the Designer")
+    except Exception as e:
+        st.error(f"Esmee error: {e}")
+
+# Download transcript
 if st.download_button(
     "📥 Download Transcript",
     data="\n\n".join(msg["content"] for msg in st.session_state.conversation),
