@@ -1,3 +1,4 @@
+
 import streamlit as st
 import openai
 import os
@@ -5,7 +6,6 @@ import random
 
 st.set_page_config(page_title="Policy AI Roundtable", layout="wide")
 
-# Avatar placeholders (replace with URLs or paths to images if needed)
 avatars = {
     "StrategyBot": "🧠",
     "FinanceBot": "💰",
@@ -17,10 +17,9 @@ avatars = {
     "ModeratorBot": "🎤"
 }
 
-# Set API key
-openai.api_key = st.secrets["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"] if "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" in st.secrets else st.text_input("Enter your OpenAI API key", type="password")
+openai.api_key = "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"
 
-# Agent personas
+
 roles = {
     "StrategyBot": "You are StrategyBot. ONLY speak from your own perspective. Never refer to yourself as another agent. Respond to the discussion so far. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
     "FinanceBot": "You are FinanceBot. ONLY speak from your own perspective. Evaluate financial impact and cost-benefit of policy proposals. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
@@ -54,7 +53,6 @@ if "conversation" not in st.session_state:
     st.session_state.agent_opinions = {name: "" for name in roles.keys()}
     st.session_state.history = []
 
-# Display avatars and current opinion summary
 st.markdown("### 🧑‍💼 Agents")
 cols = st.columns(4)
 for i, name in enumerate(roles):
@@ -63,14 +61,12 @@ for i, name in enumerate(roles):
         if st.session_state.agent_opinions[name]:
             st.caption(st.session_state.agent_opinions[name][:200] + ("..." if len(st.session_state.agent_opinions[name]) > 200 else ""))
 
-# Run a discussion round
 if st.button("▶️ Run Next Round"):
     agent_names = list(roles.keys())
     conversation = st.session_state.conversation
     agent_opinions = st.session_state.agent_opinions
 
     if not any([msg["role"] == "assistant" and "ModeratorBot" in msg["content"] for msg in conversation]):
-        # Start with Moderator
         try:
             mod_response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
@@ -82,7 +78,6 @@ if st.button("▶️ Run Next Round"):
         except Exception as e:
             st.error(f"ModeratorBot error: {e}")
 
-    # Recent discussion context
     recent_text = " ".join([msg["content"].lower() for msg in conversation[-10:]])
     round_agents = []
     for name in agent_names:
@@ -119,13 +114,11 @@ if st.button("▶️ Run Next Round"):
     st.session_state.conversation = conversation
     st.session_state.agent_opinions = agent_opinions
 
-# Show full conversation
 st.markdown("---")
 st.markdown("### 🗣️ Conversation")
 for msg in st.session_state.conversation:
     st.markdown(f"{msg['content']}")
 
-# Final summary
 if st.button("🧾 Get Final Recommendation"):
     try:
         response = openai.ChatCompletion.create(
@@ -141,6 +134,5 @@ if st.button("🧾 Get Final Recommendation"):
     except Exception as e:
         st.error(f"Final summary error: {e}")
 
-# Export
 if st.download_button("📥 Download Transcript", data="\n\n".join([msg["content"] for msg in st.session_state.conversation]), file_name="policy_discussion_transcript.txt"):
     st.success("Transcript ready!")
