@@ -46,6 +46,9 @@ st.subheader("Simulate a conversation between AI agents to evaluate a company po
 # Input field to capture the policy to discuss
 policy = st.text_input("💬 What policy should be discussed?", "firing those who do not achieve the KPIs")
 
+# Depth setting: number of agent interaction cycles per click
+cycles = st.number_input("🔄 Number of interaction cycles per round", min_value=1, max_value=5, value=1, step=1)
+
 # Initialize session state if it doesn't exist or policy changes
 if "conversation" not in st.session_state or st.session_state.policy != policy:
     st.session_state.conversation = [
@@ -71,7 +74,7 @@ if st.button("▶️ Run Next Round"):
     conversation = st.session_state.conversation
     agent_opinions = st.session_state.agent_opinions
 
-    # 1) Moderator speaks first
+    # Moderator speaks once if not yet
     if not any(msg["role"] == "assistant" and "Mia the Moderator" in msg["content"] for msg in conversation):
         try:
             mod_response = client.chat.completions.create(
@@ -84,40 +87,41 @@ if st.button("▶️ Run Next Round"):
         except Exception as e:
             st.error(f"Mia the Moderator error: {e}")
 
-    # 2) Other agents speak based on urgency or chance
-    recent_text = " ".join(msg["content"].lower() for msg in conversation[-10:])
-    round_agents = []
-    for name in agent_names:
-        if name == "Mia the Moderator":
-            continue
-        keywords = urgency_keywords.get(name, [])
-        if any(kw in recent_text for kw in keywords) or random.random() < 0.9:
-            round_agents.append(name)
-    random.shuffle(round_agents)
+    # Run multiple cycles of agent responses for deeper dialogue
+    for _ in range(cycles):
+        recent_text = " ".join(msg["content"].lower() for msg in conversation[-10:])
+        round_agents = []
+        for name in agent_names:
+            if name == "Mia the Moderator":
+                continue
+            keywords = urgency_keywords.get(name, [])
+            # include if topic urgent or random chance
+            if any(kw in recent_text for kw in keywords) or random.random() < 0.9:
+                round_agents.append(name)
+        random.shuffle(round_agents)
 
-    # 3) Each agent responds
-    for name in round_agents:
-        try:
-            summary = "Here's what others have said:\n\n"
-            for other, opinion in agent_opinions.items():
-                if opinion and other != name:
-                    snippet = opinion[:200] + ("..." if len(opinion) > 200 else "")
-                    summary += f"- {other} said: {snippet}\n"
+        for name in round_agents:
+            try:
+                summary = "Here's what others have said:\n\n"
+                for other, opinion in agent_opinions.items():
+                    if opinion and other != name:
+                        snippet = opinion[:200] + ("..." if len(opinion) > 200 else "")
+                        summary += f"- {other} said: {snippet}\n"
 
-            user_prompt = f"{summary}\nPlease respond with your unique perspective, referencing others where helpful. Do not repeat yourself."
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": roles[name]},
-                    *conversation,
-                    {"role": "user", "content": user_prompt}
-                ]
-            )
-            content = response.choices[0].message.content
-            conversation.append({"role": "assistant", "content": f"{name} says:\n{content}"})
-            agent_opinions[name] = content.strip()
-        except Exception as e:
-            st.warning(f"{name} error: {e}")
+                user_prompt = f"{summary}\nPlease respond with your unique perspective, referencing others where helpful. Do not repeat yourself."
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": roles[name]},
+                        *conversation,
+                        {"role": "user", "content": user_prompt}
+                    ]
+                )
+                content = response.choices[0].message.content
+                conversation.append({"role": "assistant", "content": f"{name} says:\n{content}"})
+                agent_opinions[name] = content.strip()
+            except Exception as e:
+                st.warning(f"{name} error: {e}")
 
     # Save back state
     st.session_state.conversation = conversation
