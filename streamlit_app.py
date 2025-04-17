@@ -16,8 +16,8 @@ avatars = {
     "Mia the Moderator": "🎤"
 }
 
+# Initialize OpenAI client (new 1.x interface)
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
 
 roles = {
     "John the Strategist": "You are John the Strategist. ONLY speak from your own perspective. Never refer to yourself as another agent. Respond to the discussion so far. Reference other agents by name if you agree or disagree. Do not repeat your earlier arguments unless refining or rebutting.",
@@ -46,15 +46,14 @@ st.subheader("Simulate a conversation between AI agents to evaluate a company po
 # Input field to capture the policy to discuss
 policy = st.text_input("💬 What policy should be discussed?", "firing those who do not achieve the KPIs")
 
-# Initialize session state if it doesn't exist
+# Initialize session state if it doesn't exist or policy changes
 if "conversation" not in st.session_state or st.session_state.policy != policy:
-    # Reset the conversation state if policy changes
     st.session_state.conversation = [
         {"role": "user", "content": f"The team is discussing the policy: '{policy}'\nBegin by sharing your perspective. Speak only if your expertise is relevant or you have something to challenge or clarify. Engage with each other and seek consensus."}
     ]
     st.session_state.agent_opinions = {name: "" for name in roles.keys()}
     st.session_state.history = []
-    st.session_state.policy = policy  # Store the current policy
+    st.session_state.policy = policy
 
 st.markdown("### 🧑‍💼 Agents")
 cols = st.columns(4)
@@ -62,45 +61,51 @@ for i, name in enumerate(roles):
     with cols[i % 4]:
         st.markdown(f"{avatars[name]} **{name}**")
         if st.session_state.agent_opinions[name]:
-            st.caption(st.session_state.agent_opinions[name][:200] + ("..." if len(st.session_state.agent_opinions[name]) > 200 else ""))
+            preview = st.session_state.agent_opinions[name][:200]
+            if len(st.session_state.agent_opinions[name]) > 200:
+                preview += "..."
+            st.caption(preview)
 
 if st.button("▶️ Run Next Round"):
     agent_names = list(roles.keys())
     conversation = st.session_state.conversation
     agent_opinions = st.session_state.agent_opinions
 
-    if not any([msg["role"] == "assistant" and "Mia the Moderator" in msg["content"] for msg in conversation]):
+    # 1) Moderator speaks first
+    if not any(msg["role"] == "assistant" and "Mia the Moderator" in msg["content"] for msg in conversation):
         try:
-            mod_response = openai.ChatCompletion.create(
+            mod_response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "system", "content": roles["Mia the Moderator"]}, *conversation]
             )
-            mod_content = mod_response["choices"][0]["message"]["content"]
+            mod_content = mod_response.choices[0].message.content
             conversation.append({"role": "assistant", "content": f"Mia the Moderator says:\n{mod_content}"})
             agent_opinions["Mia the Moderator"] = mod_content.strip()
         except Exception as e:
             st.error(f"Mia the Moderator error: {e}")
 
-    recent_text = " ".join([msg["content"].lower() for msg in conversation[-10:]])
+    # 2) Other agents speak based on urgency or chance
+    recent_text = " ".join(msg["content"].lower() for msg in conversation[-10:])
     round_agents = []
     for name in agent_names:
-        if name != "Mia the Moderator":
-            keywords = urgency_keywords.get(name, [])
-            if any(word in recent_text for word in keywords) or random.random() < 0.9:
-                round_agents.append(name)
-
+        if name == "Mia the Moderator":
+            continue
+        keywords = urgency_keywords.get(name, [])
+        if any(kw in recent_text for kw in keywords) or random.random() < 0.9:
+            round_agents.append(name)
     random.shuffle(round_agents)
 
+    # 3) Each agent responds
     for name in round_agents:
         try:
             summary = "Here's what others have said:\n\n"
-            for other_name, opinion in agent_opinions.items():
-                if opinion and other_name != name:
-                    summary += f"- {other_name} said: {opinion[:200]}...\n"
+            for other, opinion in agent_opinions.items():
+                if opinion and other != name:
+                    snippet = opinion[:200] + ("..." if len(opinion) > 200 else "")
+                    summary += f"- {other} said: {snippet}\n"
 
             user_prompt = f"{summary}\nPlease respond with your unique perspective, referencing others where helpful. Do not repeat yourself."
-
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": roles[name]},
@@ -108,12 +113,13 @@ if st.button("▶️ Run Next Round"):
                     {"role": "user", "content": user_prompt}
                 ]
             )
-            content = response["choices"][0]["message"]["content"]
+            content = response.choices[0].message.content
             conversation.append({"role": "assistant", "content": f"{name} says:\n{content}"})
             agent_opinions[name] = content.strip()
         except Exception as e:
             st.warning(f"{name} error: {e}")
 
+    # Save back state
     st.session_state.conversation = conversation
     st.session_state.agent_opinions = agent_opinions
 
@@ -124,18 +130,22 @@ for msg in st.session_state.conversation:
 
 if st.button("🧾 Get Final Recommendation"):
     try:
-        response = openai.ChatCompletion.create(
+        result = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": roles["Mia the Moderator"] + " Summarize the discussion above. Give a final recommendation: should the policy be implemented? What would be the consequences, risks, and benefits?"},
                 *st.session_state.conversation
             ]
         )
-        final_summary = response["choices"][0]["message"]["content"]
+        final_summary = result.choices[0].message.content
         st.markdown("### ✅ Final Recommendation")
         st.success(final_summary)
     except Exception as e:
         st.error(f"Final summary error: {e}")
 
-if st.download_button("📥 Download Transcript", data="\n\n".join([msg["content"] for msg in st.session_state.conversation]), file_name="policy_discussion_transcript.txt"):
+if st.download_button(
+    "📥 Download Transcript",
+    data="\n\n".join(msg["content"] for msg in st.session_state.conversation),
+    file_name="policy_discussion_transcript.txt"
+):
     st.success("Transcript ready!")
